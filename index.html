@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infografía Interactiva de Hardware</title>
+    <!-- Tailwind CSS para estilos rápidos y profesionales -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconos Lucide para la interfaz -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Estilos personalizados para animaciones */
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        /* Ocultar barra de desplazamiento en el modal pero permitir scroll */
+        .modal-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .modal-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .modal-scroll::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .modal-scroll::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* --- Estilos para el Diagrama de Flujo --- */
+        .circuit-line {
+            stroke-dasharray: 10;
+            animation: dash 1s linear infinite;
+            opacity: 0.3; /* Tenue por defecto */
+        }
+        
+        /* Clases para activar animaciones específicas */
+        .flow-active {
+            opacity: 1;
+            stroke-width: 3;
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -20;
+            }
+        }
+
+        .component-node {
+            transition: all 0.3s ease;
+        }
+        .component-node.active-node {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Encabezado -->
+    <header class="bg-slate-900 text-white py-10 px-4 shadow-lg border-b-4 border-blue-500">
+        <div class="container mx-auto max-w-6xl text-center">
+            <div class="flex justify-center mb-4">
+                <div class="bg-blue-600 p-3 rounded-full shadow-lg shadow-blue-500/50">
+                    <i data-lucide="cpu" class="w-10 h-10 text-white"></i>
+                </div>
+            </div>
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 tracking-tight">Arquitectura del Computador</h1>
+            <p class="text-xl text-blue-200 max-w-2xl mx-auto">Análisis técnico de componentes y simulación de flujo de señales.</p>
+        </div>
+    </header>
+
+    <!-- NUEVA SECCIÓN: Laboratorio de Interacción -->
+    <section class="container mx-auto max-w-6xl px-4 py-8 mt-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="activity" class="text-blue-600"></i>
+                        Monitor de Señales en Tiempo Real
+                    </h2>
+                    <p class="text-sm text-slate-500">Haz clic en los botones para simular flujos de datos.</p>
+                </div>
+                <div class="flex gap-2 flex-wrap justify-center">
+                    <button onclick="simulateFlow('power')" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm">
+                        <i data-lucide="zap" class="w-4 h-4"></i> Energía (PSU)
+                    </button>
+                    <button onclick="simulateFlow('boot')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm">
+                        <i data-lucide="hard-drive" class="w-4 h-4"></i> Cargar Datos (Boot)
+                    </button>
+                    <button onclick="simulateFlow('gaming')" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm">
+                        <i data-lucide="gamepad-2" class="w-4 h-4"></i> Renderizado (GPU)
+                    </button>
+                    <button onclick="resetSimulation()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-sm font-semibold transition-colors">
+                        Reiniciar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Área Visual del Diagrama -->
+            <div class="relative bg-slate-900 h-[500px] w-full p-8 flex items-center justify-center overflow-hidden">
+                
+                <!-- Fondo de cuadrícula técnica -->
+                <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#4b5563 1px, transparent 1px); background-size: 20px 20px;"></div>
+
+                <!-- SVG Layer para las conexiones (Cables/Buses) -->
+                <svg class="absolute inset-0 w-full h-full pointer-events-none z-0" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Definición de gradientes -->
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:rgb(59, 130, 246);stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:rgb(147, 51, 234);stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Línea PSU -> MB (Power) -->
+                    <path id="path-power" d="M 150 400 L 400 250 L 650 400 L 400 100" stroke="#fbbf24" stroke-width="2" fill="none" class="circuit-line" />
+                    
+                    <!-- Línea Storage -> RAM (Data Load) -->
+                    <path id="path-storage-ram" d="M 150 250 L 400 250 L 650 250" stroke="#3b82f6" stroke-width="2" fill="none" class="circuit-line" />
+
+                    <!-- Línea RAM <-> CPU (Processing) -->
+                    <path id="path-ram-cpu" d="M 650 250 L 400 250 L 400 100" stroke="#22c55e" stroke-width="2" fill="none" class="circuit-line" />
+
+                    <!-- Línea CPU -> GPU (Rendering) -->
+                    <path id="path-cpu-gpu" d="M 400 100 L 400 250 L 400 400" stroke="#a855f7" stroke-width="2" fill="none" class="circuit-line" />
+                </svg>
+
+                <!-- Posicionamiento de Componentes (Nodos) -->
+                <div class="relative z-10 w-full h-full max-w-4xl mx-auto grid grid-cols-3 grid-rows-3 gap-4">
+                    
+                    <!-- CPU (Arriba Centro) -->
+                    <div id="node-cpu" class="col-start-2 row-start-1 flex flex-col items-center justify-center component-node bg-slate-800 border-2 border-slate-600 rounded-lg p-4 shadow-lg w-32 mx-auto">
+                        <i data-lucide="cpu" class="w-10 h-10 text-blue-400 mb-2"></i>
+                        <span class="text-white text-xs font-bold">CPU</span>
+                        <div class="text-[10px] text-blue-200 text-center mt-1 status-text">Inactivo</div>
+                    </div>
+
+                    <!-- RAM (Derecha Centro) -->
+                    <div id="node-ram" class="col-start-3 row-start-2 flex flex-col items-center justify-center component-node bg-slate-800 border-2 border-slate-600 rounded-lg p-4 shadow-lg w-32 mx-auto">
+                        <i data-lucide="memory-stick" class="w-10 h-10 text-green-400 mb-2"></i>
+                        <span class="text-white text-xs font-bold">RAM</span>
+                        <div class="text-[10px] text-green-200 text-center mt-1 status-text">Vacío</div>
+                    </div>
+
+                    <!-- Storage (Izquierda Centro) -->
+                    <div id="node-storage" class="col-start-1 row-start-2 flex flex-col items-center justify-center component-node bg-slate-800 border-2 border-slate-600 rounded-lg p-4 shadow-lg w-32 mx-auto">
+                        <i data-lucide="hard-drive" class="w-10 h-10 text-cyan-400 mb-2"></i>
+                        <span class="text-white text-xs font-bold">SSD NVMe</span>
+                        <div class="text-[10px] text-cyan-200 text-center mt-1 status-text">Reposo</div>
+                    </div>
+
+                    <!-- GPU (Abajo Centro) -->
+                    <div id="node-gpu" class="col-start-2 row-start-3 flex flex-col items-center justify-center component-node bg-slate-800 border-2 border-slate-600 rounded-lg p-4 shadow-lg w-32 mx-auto">
+                        <i data-lucide="monitor-play" class="w-10 h-10 text-purple-400 mb-2"></i>
+                        <span class="text-white text-xs font-bold">GPU</span>
+                        <div class="text-[10px] text-purple-200 text-center mt-1 status-text">Inactivo</div>
+                    </div>
+
+                    <!-- PSU (Abajo Izquierda - Representación lógica de energía) -->
+                    <div id="node-psu" class="col-start-1 row-start-3 flex flex-col items-center justify-center component-node bg-slate-800 border-2 border-slate-600 rounded-lg p-4 shadow-lg w-32 mx-auto transform translate-y-4">
+                        <i data-lucide="zap" class="w-10 h-10 text-yellow-400 mb-2"></i>
+                        <span class="text-white text-xs font-bold">PSU</span>
+                        <div class="text-[10px] text-yellow-200 text-center mt-1 status-text">Standby</div>
+                    </div>
+
+                </div>
+
+                <!-- Explicación Flotante -->
+                <div id="simulation-info" class="absolute bottom-4 right-4 bg-black/80 backdrop-blur text-white p-3 rounded-lg text-sm max-w-xs border-l-4 border-slate-500 transition-all duration-300">
+                    <h4 class="font-bold mb-1">Estado del Sistema</h4>
+                    <p class="text-slate-300 text-xs">Selecciona una simulación arriba para ver la interacción.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Barra de Controles (Grid) -->
+    <div class="container mx-auto max-w-6xl px-4 mt-12 relative z-10">
+        <h2 class="text-2xl font-bold text-slate-800 mb-4 px-2">Detalles Técnicos por Componente</h2>
+        <div class="bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2 text-slate-500 w-full md:w-auto">
+                <i data-lucide="search" class="w-5 h-5"></i>
+                <input type="text" id="searchInput" placeholder="Buscar componente..." class="w-full md:w-64 focus:outline-none focus:border-blue-500 border-b border-transparent py-1 transition-colors">
+            </div>
+            <div class="text-sm text-slate-400">
+                Catálogo completo de hardware
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid de Componentes -->
+    <main class="container mx-auto max-w-6xl px-4 py-8 flex-grow">
+        <div id="componentsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Las tarjetas se generarán aquí con JavaScript -->
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-8 text-center mt-auto">
+        <p>Infografía Técnica Interactiva - Diseñada con cariño para educación tecnológica.</p>
+    </footer>
+
+    <!-- Modal (Ventana Emergente) -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black bg-opacity-70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl relative flex flex-col md:flex-row fade-in">
+            <!-- Botón Cerrar -->
+            <button onclick="closeModal()" class="absolute top-4 right-4 bg-white/80 hover:bg-white text-slate-800 p-2 rounded-full shadow-md z-10 transition-colors">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+
+            <!-- Imagen del Modal -->
+            <div class="w-full md:w-1/2 h-64 md:h-auto bg-slate-100 relative group">
+                <img id="modalImage" src="" alt="Componente" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6 md:hidden">
+                    <h2 id="modalTitleMobile" class="text-2xl font-bold text-white"></h2>
+                </div>
+            </div>
+
+            <!-- Contenido del Modal -->
+            <div class="w-full md:w-1/2 p-8 overflow-y-auto modal-scroll bg-white">
+                <div class="hidden md:block mb-6">
+                    <span id="modalCategory" class="text-xs font-bold tracking-wider text-blue-600 uppercase bg-blue-50 px-2 py-1 rounded">Hardware</span>
+                    <h2 id="modalTitle" class="text-3xl font-bold text-slate-800 mt-2"></h2>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2 text-indigo-700">
+                            <i data-lucide="activity" class="w-5 h-5"></i>
+                            <h3 class="font-bold text-lg">Función Principal</h3>
+                        </div>
+                        <p id="modalFunction" class="text-slate-600 leading-relaxed"></p>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-lg border-l-4 border-blue-500">
+                        <div class="flex items-center gap-2 mb-2 text-blue-700">
+                            <i data-lucide="settings" class="w-5 h-5"></i>
+                            <h3 class="font-bold text-lg">¿Cómo Funciona?</h3>
+                        </div>
+                        <p id="modalMechanism" class="text-slate-700 text-sm leading-relaxed"></p>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center gap-2 mb-2 text-amber-600">
+                            <i data-lucide="lightbulb" class="w-5 h-5"></i>
+                            <h3 class="font-bold text-lg">Dato Clave</h3>
+                        </div>
+                        <p id="modalFact" class="text-slate-600 text-sm italic"></p>
+                    </div>
+                </div>
+                
+                <div class="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                    <button onclick="closeModal()" class="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors font-medium">Entendido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de Lógica -->
+    <script>
+        // Datos de los componentes
+        const componentsData = [
+            {
+                id: 1,
+                title: "Placa Madre (Motherboard)",
+                category: "Infraestructura",
+                image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
+                description: "El sistema nervioso central de tu computadora.",
+                mainFunction: "Interconectar todos los componentes (CPU, RAM, GPU, Discos) permitiendo que se comuniquen entre sí y distribuyendo la energía eléctrica necesaria para su operación.",
+                mechanism: "Utiliza pistas de cobre conductoras (buses) para transmitir datos a alta velocidad. Contiene el chipset, que gestiona el tráfico de datos, y el BIOS/UEFI, que inicializa el hardware al encender el equipo.",
+                fact: "Las placas modernas pueden tener más de 10 capas de circuitos superpuestas para manejar la complejidad de las conexiones sin interferencias."
+            },
+            {
+                id: 2,
+                title: "Procesador (CPU)",
+                category: "Procesamiento",
+                image: "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?auto=format&fit=crop&w=800&q=80", 
+                description: "El cerebro que ejecuta todas las instrucciones.",
+                mainFunction: "Interpretar y ejecutar las instrucciones de los programas y el sistema operativo, realizando operaciones lógicas y matemáticas millones de veces por segundo.",
+                mechanism: "Funciona mediante transistores microscópicos que actúan como interruptores (encendido/apagado). Utiliza un ciclo de 'buscar, decodificar y ejecutar' para procesar datos desde la memoria RAM.",
+                fact: "Un procesador moderno como un i7 o i9 contiene miles de millones de transistores en un espacio más pequeño que una galleta."
+            },
+            {
+                id: 3,
+                title: "Tarjeta Gráfica (GPU)",
+                category: "Gráficos",
+                image: "https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&w=800&q=80",
+                description: "Potencia visual para juegos y renderizado.",
+                mainFunction: "Procesar datos visuales complejos y renderizar imágenes, videos y entornos 3D para enviarlos al monitor, liberando al CPU de esta carga pesada.",
+                mechanism: "A diferencia del CPU (pocos núcleos potentes), la GPU tiene miles de núcleos pequeños diseñados para el procesamiento paralelo, ideal para calcular el color de millones de píxeles simultáneamente.",
+                fact: "Las GPUs modernas son tan potentes en cálculos paralelos que se usan para entrenar Inteligencias Artificiales, no solo para videojuegos."
+            },
+            {
+                id: 4,
+                title: "Memoria RAM",
+                category: "Memoria",
+                image: "https://images.unsplash.com/photo-1562976540-1502c2145186?auto=format&fit=crop&w=800&q=80",
+                description: "Espacio de trabajo temporal de alta velocidad.",
+                mainFunction: "Almacenar temporalmente los datos y programas que el CPU está utilizando activamente para permitir un acceso ultra rápido.",
+                mechanism: "Es una memoria volátil, lo que significa que pierde su información al apagar la PC. Funciona como un 'escritorio': cuanto más grande sea, más documentos (programas) puedes tener abiertos a la vez sin lentitud.",
+                fact: "La RAM es miles de veces más rápida que un disco duro o SSD, por eso los programas se cargan en ella antes de ejecutarse."
+            },
+            {
+                id: 5,
+                title: "Fuente de Poder (PSU)",
+                category: "Energía",
+                image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=800&q=80",
+                description: "El corazón que bombea energía al sistema.",
+                mainFunction: "Convertir la corriente alterna (AC) de tu enchufe doméstico en corriente continua (DC) estable y de bajo voltaje que los componentes de la PC pueden usar.",
+                mechanism: "Utiliza transformadores para bajar el voltaje y rectificadores para cambiar el tipo de corriente. Luego filtra la electricidad para asegurar que sea 'limpia' y estable, protegiendo contra picos de tensión.",
+                fact: "Una fuente de mala calidad puede quemar otros componentes. La certificación '80 Plus' indica qué tan eficiente es aprovechando la energía."
+            },
+            {
+                id: 6,
+                title: "Almacenamiento (SSD NVMe)",
+                category: "Almacenamiento",
+                // IMAGEN CORREGIDA: Usando una foto de alta calidad de un SSD/Placa para asegurar carga
+                image: "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?auto=format&fit=crop&w=800&q=80",
+                description: "La memoria a largo plazo de tu equipo.",
+                mainFunction: "Guardar tus archivos, fotos, sistema operativo y programas de forma permanente, incluso cuando la computadora está apagada.",
+                mechanism: "Los SSDs modernos (NVMe) usan celdas de memoria flash NAND (similares a las de un USB pero mucho más rápidas) y se conectan directamente a las líneas PCIe de la placa madre para velocidades extremas.",
+                fact: "Un SSD NVMe puede ser hasta 35 veces más rápido que un disco duro mecánico tradicional (HDD)."
+            }
+        ];
+
+        // --- SISTEMA DE SIMULACIÓN VISUAL ---
+        function resetSimulation() {
+            // Limpiar clases
+            document.querySelectorAll('.circuit-line').forEach(el => el.classList.remove('flow-active'));
+            document.querySelectorAll('.component-node').forEach(el => el.classList.remove('active-node'));
+            
+            // Resetear textos
+            updateStatus('cpu', 'Inactivo', 'text-blue-200');
+            updateStatus('ram', 'Vacío', 'text-green-200');
+            updateStatus('storage', 'Reposo', 'text-cyan-200');
+            updateStatus('gpu', 'Inactivo', 'text-purple-200');
+            updateStatus('psu', 'Standby', 'text-yellow-200');
+            
+            document.querySelector('#simulation-info h4').textContent = "Estado del Sistema";
+            document.querySelector('#simulation-info p').textContent = "Selecciona una simulación arriba para ver la interacción.";
+            document.querySelector('#simulation-info').classList.remove('border-yellow-500', 'border-blue-500', 'border-purple-500');
+            document.querySelector('#simulation-info').classList.add('border-slate-500');
+        }
+
+        function updateStatus(id, text, colorClass) {
+            const el = document.querySelector(`#node-${id} .status-text`);
+            el.textContent = text;
+            el.className = `text-[10px] text-center mt-1 status-text ${colorClass}`;
+        }
+
+        function simulateFlow(type) {
+            resetSimulation();
+            const infoBox = document.querySelector('#simulation-info');
+            
+            if (type === 'power') {
+                // Simulación de Energía
+                document.getElementById('path-power').classList.add('flow-active');
+                
+                ['cpu', 'ram', 'storage', 'gpu', 'psu'].forEach(id => {
+                    document.getElementById(`node-${id}`).classList.add('active-node');
+                    updateStatus(id, 'Energizado', 'text-yellow-400 font-bold');
+                });
+
+                infoBox.querySelector('h4').textContent = "Distribución de Energía";
+                infoBox.querySelector('p').textContent = "La Fuente de Poder (PSU) envía corriente DC estable a todos los componentes a través de la placa madre. Sin esto, nada funciona.";
+                infoBox.classList.remove('border-slate-500');
+                infoBox.classList.add('border-yellow-500');
+
+            } else if (type === 'boot') {
+                // Simulación de Carga (Storage -> RAM -> CPU)
+                document.getElementById('path-storage-ram').classList.add('flow-active');
+                document.getElementById('path-ram-cpu').classList.add('flow-active');
+                
+                document.getElementById('node-storage').classList.add('active-node');
+                document.getElementById('node-ram').classList.add('active-node');
+                document.getElementById('node-cpu').classList.add('active-node');
+
+                updateStatus('storage', 'Leyendo OS', 'text-cyan-400 font-bold');
+                updateStatus('ram', 'Cargando...', 'text-green-400 font-bold');
+                updateStatus('cpu', 'Procesando', 'text-blue-400 font-bold');
+
+                infoBox.querySelector('h4').textContent = "Carga de Datos (Boot)";
+                infoBox.querySelector('p').textContent = "El CPU solicita datos. El SSD lee los archivos del Sistema Operativo y los transfiere a la RAM (mucho más rápida) para que el CPU pueda usarlos.";
+                infoBox.classList.remove('border-slate-500');
+                infoBox.classList.add('border-blue-500');
+
+            } else if (type === 'gaming') {
+                // Simulación de Renderizado (CPU <-> GPU)
+                document.getElementById('path-ram-cpu').classList.add('flow-active');
+                document.getElementById('path-cpu-gpu').classList.add('flow-active');
+
+                document.getElementById('node-cpu').classList.add('active-node');
+                document.getElementById('node-gpu').classList.add('active-node');
+                document.getElementById('node-ram').classList.add('active-node');
+
+                updateStatus('cpu', 'Lógica Juego', 'text-blue-400 font-bold');
+                updateStatus('ram', 'Datos Texturas', 'text-green-400 font-bold');
+                updateStatus('gpu', 'Renderizando 3D', 'text-purple-400 font-bold');
+
+                infoBox.querySelector('h4').textContent = "Procesamiento Gráfico";
+                infoBox.querySelector('p').textContent = "El CPU calcula la física del juego, mientras envía instrucciones a la GPU para que dibuje (renderice) los polígonos y texturas en tu pantalla.";
+                infoBox.classList.remove('border-slate-500');
+                infoBox.classList.add('border-purple-500');
+            }
+        }
+
+        // --- SISTEMA DE TARJETAS Y MODAL (Existente) ---
+        const grid = document.getElementById('componentsGrid');
+        const searchInput = document.getElementById('searchInput');
+        const modal = document.getElementById('modalOverlay');
+
+        function renderCards(filterText = '') {
+            grid.innerHTML = '';
+            const filteredData = componentsData.filter(item => 
+                item.title.toLowerCase().includes(filterText.toLowerCase()) || 
+                item.description.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            filteredData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden card-hover transition-all duration-300 flex flex-col h-full';
+                card.innerHTML = `
+                    <div class="h-48 overflow-hidden relative group cursor-pointer" onclick="openModal(${item.id})">
+                        <img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                        <div class="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors"></div>
+                        <span class="absolute top-3 right-3 bg-white/90 backdrop-blur text-xs font-bold px-2 py-1 rounded text-slate-700 shadow-sm">
+                            ${item.category}
+                        </span>
+                    </div>
+                    <div class="p-6 flex flex-col flex-grow">
+                        <h3 class="text-xl font-bold text-slate-800 mb-2">${item.title}</h3>
+                        <p class="text-slate-600 text-sm mb-4 flex-grow">${item.description}</p>
+                        <button onclick="openModal(${item.id})" class="mt-auto w-full py-2 px-4 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2 group">
+                            Ver Detalles
+                            <i data-lucide="arrow-right" class="w-4 h-4 transition-transform group-hover:translate-x-1"></i>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function openModal(id) {
+            const item = componentsData.find(c => c.id === id);
+            if (!item) return;
+            document.getElementById('modalTitle').textContent = item.title;
+            document.getElementById('modalTitleMobile').textContent = item.title;
+            document.getElementById('modalCategory').textContent = item.category;
+            document.getElementById('modalImage').src = item.image;
+            document.getElementById('modalFunction').textContent = item.mainFunction;
+            document.getElementById('modalMechanism').textContent = item.mechanism;
+            document.getElementById('modalFact').textContent = `Sabías que: ${item.fact}`;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            renderCards(e.target.value);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCards();
+            lucide.createIcons();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+    </script>
+</body>
+</html>
